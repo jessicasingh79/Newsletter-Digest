@@ -1,0 +1,192 @@
+{
+  "name": "Newsletter Digest - Sent Daily",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 3,
+        "simple": false,
+        "filters": {
+          "q": "from:(theneuron@newsletter.theneurondaily.com OR agentai@mail.beehiiv.com OR crew@technews.therundown.ai) newer_than:2d"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "974e2085-031c-46a6-8e30-125df0495f9c",
+      "name": "Get many messages",
+      "webhookId": "f4afb819-5914-417e-94af-95c69ab061b9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7XTx7a0Vq8VOSsY4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const emails = $input.all();\nlet combined = '';\n\nfor (const email of emails) {\n  const from = email.json.From || email.json.from || email.json.headers?.from || 'Unknown';\n  const subject = email.json.Subject || email.json.subject || email.json.headers?.subject || 'No subject';\n  const body = email.json.text || email.json.body || email.json.snippet || '';\n  const cleaned = body\n    .replace(/[\\u200C\\u200D\\uFEFF]/g, '') // strip zero-width chars\n    .replace(/\\s+/g, ' ')\n    .trim()\n    .substring(0, 8000);\n  \n  combined += `\\n\\n---\\nFROM: ${from}\\nSUBJECT: ${subject}\\nBODY: ${cleaned}`;\n}\n\nreturn [{ json: { newsletters: combined } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "a6754c6f-01d4-45bb-af01-8ecc9ff056ce",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2000,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify(\"You are Jessica's personal AI intelligence briefing assistant.\\n\\nAbout Jessica:\\n- Strategic Operations Analyst transitioning into AI — built production RAG systems, n8n automations, Chrome extensions, React apps\\n- No engineering degree — her edge is connecting business problems to working AI solutions fast\\n- Starting role in 2 days as AI Implementation & Engagement Lead at Southwestern Law School\\n- Needs to stay current on AI in legal/higher ed, responsible AI policy, Claude updates, and enterprise AI adoption patterns\\n- Building public authority in AI automation (n8n, RAG, Pinecone, OpenAI, Claude API)\\n- Teaching an n8n/RAG workshop May 29\\n- Target audience: women transitioning into AI, non-technical operators, AI builders\\n- GitHub: github.com/jessicasingh79\\n\\nJessica's signal priorities (in order):\\n1. Frameworks and mental models she can teach or post about (like Dharmesh's context engineering piece)\\n2. New AI tools she can actually use or build with — especially n8n, RAG, agents, prompt engineering, Claude, Claude Code, Cowork, Anthropic updates\\n3. Anything relevant to implementing AI in a law school or higher ed institution — policy, responsible AI, faculty adoption, student use cases, legal AI tools\\n4. Sharp opinionated takes on where AI is going\\n5. Industry moves worth knowing — funding, model releases, big company decisions\\n6. General tech news — lowest priority, only if genuinely surprising\\n\\nNewsletters:\\n\" + $json.newsletters + \"\\n\\nFormat exactly like this:\\n\\n📬 *Evening Digest — Today*\\n\\n*🔴 Build / Teach / Post This*\\n[Things Jessica can immediately apply, build, teach, or create content about — include the link]\\n\\n*🟡 Know This*\\n[Sharp takes, model releases, Anthropic/Claude updates, legal/higher ed AI, industry moves — include the link]\\n\\n*🏛️ Law School Lens*\\n[Anything relevant to her new role — AI policy, legal tech, higher ed adoption, responsible AI — include the link. Skip this section entirely if nothing qualifies today.]\\n\\n*⚪ Awareness Only*\\n[One line max per item, only if genuinely worth knowing]\\n\\n⚡ *Edge of the day:* [One specific insight, framework, or tool Jessica can use TODAY — be concrete. Could be something she builds, teaches, posts, or brings into her new role on day one.]\\n\\nRules:\\n- Include source links for every bullet\\n- Flag anything related to: n8n, RAG, agents, Claude, Claude Code, Cowork, Anthropic, prompt/context engineering\\n- Flag anything teachable to a non-technical audience\\n- Flag anything relevant to legal AI, higher ed AI, or responsible AI policy\\n- Dharmesh-style framework pieces get priority — gold for Jessica's content and teaching\\n- Skip all ads, sponsor content, generic business news\\n- Max 600 words total. For 🔴 Build/Teach/Post items, include: what it is, why it matters to Jessica specifically, and one concrete way she can use or teach it this week.\") }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        0
+      ],
+      "id": "75e4ffa5-f04f-4620-a82e-93c8cd6d18f3",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "pD9aTKNuKttKO053",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "jessicasingh7900@gmail.com",
+        "subject": "Digest for the DAY",
+        "message": "={{ $json.content[0].text.replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>').replace(/\\*(.*?)\\*/g, '<i>$1</i>').replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\)]+)\\)/g, '<a href=\"$2\">$1</a>').replace(/\\n/g, '<br>') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "6c9a10f9-9634-437d-8f9d-342779ffcb9b",
+      "name": "Send a message",
+      "webhookId": "e305524a-5a8d-4ef1-af95-60c6060d8af1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "7XTx7a0Vq8VOSsY4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2236de9a-bb37-4438-8e7f-86bbd45aee43",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "879a2485-e8d7-468b-925a-f7f47e80308e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "302b8fc1f23112ef3ec68bb013724886582ac4a3e8fa4144de4b923b95c623ba"
+  },
+  "id": "TpuZ09wNULUddzR2M6_yA",
+  "tags": []
+}
